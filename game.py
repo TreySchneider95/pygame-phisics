@@ -23,18 +23,39 @@ play_area = (left_boundary, top_boundary, right_boundary, bottom_boundary)
 # List to store circles
 circles = []
 
-# Gravity value
-gravity = 600  # Adjust this value to control the intensity of gravity
+# Initial gravity value
+gravity = 300  # Adjust this value to control the intensity of gravity
+
+# Slider variables
+slider_rect = pygame.Rect(50, 10, 200, 20)
+slider_handle_rect = pygame.Rect(slider_rect.x, slider_rect.y, 10, slider_rect.height)
+dragging = False
+
+# Function to update gravity based on slider position
+def update_gravity():
+    global gravity
+    slider_pos = (slider_handle_rect.x - slider_rect.x) / (slider_rect.width - slider_handle_rect.width)
+    gravity = slider_pos * 1000  # Scale the gravity value
 
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            # Spawn a new circle at the click position with random direction
-            mouse_position = pygame.mouse.get_pos()
-            new_circle = Circle(200, mouse_position, play_area, gravity)
-            circles.append(new_circle)
+            if slider_handle_rect.collidepoint(event.pos):
+                dragging = True
+            else:
+                # Spawn a new circle at the click position with random direction
+                mouse_position = pygame.mouse.get_pos()
+                if mouse_position[1] > slider_rect.bottom:  # Avoid clicking the slider
+                    new_circle = Circle(200, mouse_position, play_area, gravity)
+                    circles.append(new_circle)
+        elif event.type == pygame.MOUSEBUTTONUP:
+            dragging = False
+        elif event.type == pygame.MOUSEMOTION:
+            if dragging:
+                slider_handle_rect.x = max(slider_rect.x, min(event.pos[0], slider_rect.right - slider_handle_rect.width))
+                update_gravity()
 
     screen.fill("black")
 
@@ -49,6 +70,15 @@ while running:
             running = False
     
     else:
+        # Render slider
+        pygame.draw.rect(screen, "white", slider_rect)
+        pygame.draw.rect(screen, "red", slider_handle_rect)
+        
+        # Display gravity value
+        font = pygame.font.SysFont(None, 24)
+        gravity_text = font.render(f'Gravity: {gravity:.2f}', True, "white")
+        screen.blit(gravity_text, (slider_rect.right + 20, slider_rect.y))
+
         # Render border
         pygame.draw.rect(
             screen,
@@ -73,6 +103,7 @@ while running:
         )
 
         for circle in circles:
+            circle.gravity = gravity  # Update gravity for each circle
             circle.move(clock.get_time() / 1000.0)
 
         # Check for collisions between circles
